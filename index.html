@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Cup 2026 - Comp</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #8B0000 0%, #B22222 50%, #8B0000 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        /* ============ HEADER ============ */
+        .header {
+            background: linear-gradient(90deg, #4a0000 0%, #8B0000 50%, #4a0000 100%);
+            color: #FFD700;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            border-bottom: 3px solid #FFD700;
+            position: relative;
+        }
+        .header h1 { font-size: 2.5em; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin-bottom: 5px; }
+        .header .subtitle { font-size: 1.2em; color: #fff; opacity: 0.9; }
+        .user-info {
+            position: absolute; top: 20px; right: 20px;
+            color: #FFD700; display: flex; align-items: center; gap: 15px;
+        }
+
+        /* ============ NAV ============ */
+        .nav {
+            background: #4a0000; padding: 10px;
+            display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
+        }
+        .nav button {
+            background: linear-gradient(180deg, #8B0000 0%, #6b0000 100%);
+            color: #FFD700; border: 2px solid #FFD700;
+            padding: 10px 20px; cursor: pointer; border-radius: 5px;
+            font-weight: bold; transition: all 0.3s; font-size: 0.95em;
+        }
+        .nav button:hover, .nav button.active { background: #FFD700; color: #4a0000; }
+
+        /* ============ LAYOUT ============ */
+        .container { max-width: 1200px; margin: 20px auto; padding: 20px; }
+
+        .card {
+            background: white; border-radius: 10px; padding: 25px;
+            margin-bottom: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.25);
+        }
+        .card h2 {
+            color: #8B0000; border-bottom: 3px solid #FFD700;
+            padding-bottom: 10px; margin-bottom: 20px;
+        }
+
+        /* ============ BUTTONS ============ */
+        .btn {
+            background: linear-gradient(180deg, #8B0000 0%, #6b0000 100%);
+            color: white; border: none; padding: 12px 25px; cursor: pointer;
+            border-radius: 5px; font-weight: bold; font-size: 1em; transition: all 0.3s;
+        }
+        .btn:hover { background: linear-gradient(180deg, #a00000 0%, #8B0000 100%); transform: translateY(-2px); }
+        .btn-gold { background: linear-gradient(180deg, #FFD700 0%, #FFA500 100%); color: #4a0000; }
+        .btn-gold:hover { background: linear-gradient(180deg, #ffe040 0%, #FFD700 100%); color: #4a0000; }
+        .btn-danger { background: linear-gradient(180deg, #dc3545 0%, #a71d2a 100%); }
+        .btn-success { background: linear-gradient(180deg, #28a745 0%, #1a7a30 100%); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-sm { padding: 6px 14px; font-size: 0.85em; }
+
+        /* ============ FORMS ============ */
+        .login-container { max-width: 420px; margin: 50px auto; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #8B0000; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 10px; border: 2px solid #ddd;
+            border-radius: 5px; font-size: 1em;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: #8B0000; outline: none;
+        }
+
+        .alert { padding: 12px 16px; border-radius: 5px; margin-bottom: 15px; font-weight: bold; }
+        .alert-error { background: #ffe6e6; border: 2px solid #dc3545; color: #dc3545; }
+        .alert-success { background: #e6ffe6; border: 2px solid #28a745; color: #28a745; }
+        .alert-info { background: #e8f0ff; border: 2px solid #8B0000; color: #8B0000; }
+        .alert-warning { background: #fff8dc; border: 2px solid #FFD700; color: #7a5800; }
+
+        /* ============ LEADERBOARD ============ */
+        .leaderboard-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .leaderboard {
+            width: 100%; min-width: 400px; border-collapse: collapse;
+        }
+        .leaderboard th, .leaderboard td {
+            padding: 14px 12px; text-align: left; border-bottom: 2px solid #ddd;
+        }
+        .leaderboard th {
+            background: linear-gradient(180deg, #8B0000 0%, #4a0000 100%);
+            color: #FFD700; font-size: 0.95em;
+        }
+        .leaderboard tr.leader-row td {
+            background: linear-gradient(90deg, #FFD700 0%, #fffbe6 50%, #FFD700 100%);
+            font-weight: bold; border: 2px solid #FFA500;
+        }
+        .leaderboard tr:hover td { background: #fff0f0; }
+        .leaderboard .clickable { cursor: pointer; }
+        .leaderboard .clickable:hover td { background: #ffe0e0; }
+
+        /* ============ BRACKET PICKER ============ */
+        .bracket-section { margin-bottom: 18px; border: 2px solid #ddd; border-radius: 10px; overflow: hidden; }
+        .bracket-header {
+            background: linear-gradient(180deg, #8B0000 0%, #4a0000 100%);
+            color: #FFD700; padding: 12px 15px; font-weight: bold; font-size: 1.05em;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .bracket-header.picked { background: linear-gradient(180deg, #5a8a00 0%, #3a6000 100%); }
+        .bracket-teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; padding: 10px; }
+        .team-option {
+            padding: 12px 15px; border: 2px solid #ddd; border-radius: 8px;
+            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+        }
+        .team-option:hover { border-color: #8B0000; background: #fff0f0; }
+        .team-option.selected { border-color: #8B0000; background: #ffe0e0; font-weight: bold; }
+        .team-option .flag { font-size: 1.4em; }
+
+        .pick-count {
+            text-align: center; padding: 15px; font-size: 1.3em; font-weight: bold;
+            color: #8B0000; background: #fff0f0; border-radius: 8px; margin-bottom: 15px;
+            border: 2px solid #8B0000;
+        }
+        .pick-count.full { background: #e6ffe6; border-color: #28a745; color: #28a745; }
+
+        /* ============ TEAM CARDS ============ */
+        .teams-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px; margin-top: 15px;
+        }
+        .team-card {
+            background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px;
+            padding: 15px; border-left: 4px solid #8B0000; cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .team-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.15); border-left-color: #FFD700; }
+        .team-card h4 { color: #8B0000; margin-bottom: 8px; }
+        .team-card .picks-list { font-size: 0.9em; color: #555; }
+        .team-card .picks-list span { display: inline-block; margin: 2px 4px; background: #fff0f0; border: 1px solid #ddd; border-radius: 4px; padding: 2px 6px; }
+        .team-card .card-points { font-size: 1.3em; font-weight: bold; color: #8B0000; float: right; }
+        .status-badge { display: inline-block; padding: 3px 10px; border-radius: 15px; font-size: 0.8em; font-weight: bold; }
+        .status-submitted { background: #28a745; color: white; }
+        .status-pending { background: #ffc107; color: #333; }
+
+        /* ============ RESULTS TABLE ============ */
+        .results-table { width: 100%; border-collapse: collapse; }
+        .results-table th, .results-table td { padding: 10px 12px; border-bottom: 1px solid #ddd; text-align: left; }
+        .results-table th { background: #8B0000; color: #FFD700; }
+        .results-table tr:hover td { background: #fff0f0; }
+        .result-win { color: #28a745; font-weight: bold; }
+        .result-draw { color: #FF8C00; font-weight: bold; }
+        .round-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; font-weight: bold; }
+        .round-group { background: #e8f0ff; color: #003087; }
+        .round-r16 { background: #fff0f0; color: #8B0000; }
+        .round-qf { background: #fff8dc; color: #7a5800; }
+        .round-sf { background: #ffe0e0; color: #8B0000; }
+        .round-final { background: #FFD700; color: #4a0000; }
+
+        /* ============ TEAM DETAIL MODAL ============ */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); display: flex; justify-content: center;
+            align-items: center; z-index: 1000;
+        }
+        .modal-content {
+            background: white; border-radius: 10px; max-width: 650px;
+            max-height: 90vh; overflow-y: auto; width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        }
+        .modal-header {
+            background: linear-gradient(90deg, #4a0000 0%, #8B0000 50%, #4a0000 100%);
+            color: #FFD700; padding: 20px; border-radius: 10px 10px 0 0;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-header h2 { margin: 0; border: none; padding: 0; }
+        .modal-close { background: none; border: none; color: #FFD700; font-size: 2em; cursor: pointer; }
+        .modal-close:hover { color: white; }
+        .modal-body { padding: 20px; }
+        .detail-table { width: 100%; border-collapse: collapse; }
+        .detail-table th, .detail-table td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+        .detail-table th { background: #f0f0f0; color: #8B0000; font-weight: bold; }
+        .detail-table .pts-col { font-weight: bold; color: #8B0000; text-align: right; }
+
+        /* ============ ADMIN ============ */
+        .admin-section { background: #fff8dc; border: 2px solid #FFD700; border-radius: 10px; padding: 20px; }
+        .tab-bar { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab-btn { padding: 9px 18px; background: #f0f0f0; border: 2px solid #8B0000; border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.3s; font-size: 0.9em; }
+        .tab-btn:hover, .tab-btn.active { background: #8B0000; color: #FFD700; }
+
+        .bracket-admin { border: 2px solid #ddd; border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+        .bracket-admin-header { background: #f0f0f0; padding: 10px 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .bracket-admin-header input { font-weight: bold; font-size: 1em; border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px; flex: 1; }
+        .bracket-admin textarea { width: 100%; padding: 10px; font-family: monospace; font-size: 0.9em; border: none; border-top: 1px solid #ddd; min-height: 100px; resize: vertical; }
+
+        .match-entry-row { display: grid; grid-template-columns: 1fr 60px 1fr 140px 80px; gap: 8px; align-items: center; margin-bottom: 8px; }
+        .match-entry-row input, .match-entry-row select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em; }
+        .match-result-row { display: grid; grid-template-columns: auto 1fr 60px 1fr 1fr 80px; gap: 8px; align-items: center; padding: 8px; border-bottom: 1px solid #eee; font-size: 0.9em; }
+
+        /* ============ SYNC / LOADING ============ */
+        .sync-status {
+            position: fixed; bottom: 20px; right: 20px; padding: 10px 20px;
+            border-radius: 20px; font-size: 0.9em; z-index: 999;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .sync-status.connected { background: #28a745; color: white; }
+        .sync-status.disconnected { background: #dc3545; color: white; }
+
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: flex; justify-content: center;
+            align-items: center; z-index: 2000; flex-direction: column; color: white;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid #555; border-top-color: #FFD700;
+            border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ============ RULES BOX ============ */
+        .rules-box { background: #fff8dc; border: 2px solid #FFD700; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+        .rules-box h3 { color: #8B0000; margin-bottom: 10px; }
+        .scoring-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-top: 10px; }
+        .scoring-card { background: white; border: 2px solid #FFD700; border-radius: 8px; padding: 12px; text-align: center; }
+        .scoring-card .stage { font-weight: bold; color: #8B0000; font-size: 0.9em; margin-bottom: 5px; }
+        .scoring-card .pts { font-size: 1.6em; font-weight: bold; color: #FFD700; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
+        .scoring-card .pts-label { font-size: 0.75em; color: #666; }
+
+        /* ============ MOBILE ============ */
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.6em; }
+            .user-info { position: static; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+            .nav button { padding: 8px 12px; font-size: 0.85em; }
+            .container { padding: 10px; }
+            .card { padding: 15px; }
+            .bracket-teams { grid-template-columns: 1fr 1fr; }
+            .teams-grid { grid-template-columns: 1fr; }
+            .match-entry-row { grid-template-columns: 1fr 1fr; gap: 6px; }
+            .btn { padding: 12px 20px; font-size: 1em; width: 100%; margin-bottom: 8px; }
+            .leaderboard { font-size: 0.85em; }
+            .leaderboard th, .leaderboard td { padding: 8px 6px; }
+            .modal-content { width: 95%; max-height: 95vh; }
+            .scoring-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 480px) {
+            .header h1 { font-size: 1.3em; }
+            .bracket-teams { grid-template-columns: 1fr; }
+            .scoring-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        .hidden { display: none !important; }
+        #lastUpdated { color: rgba(255,255,255,0.7); font-size: 0.85em; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <div>Loading World Cup Comp...</div>
+</div>
+
+<!-- Header -->
+<div class="header" id="mainHeader" style="display:none">
+    <h1>&#x26BD; World Cup 2026</h1>
+    <div class="subtitle">Pick your 8 teams &mdash; one from each bracket</div>
+    <div id="lastUpdated"></div>
+    <div class="user-info" id="userInfo"></div>
+</div>
+
+<!-- Nav -->
+<div class="nav hidden" id="mainNav">
+    <button onclick="showPage('leaderboard')" id="nav-leaderboard">Leaderboard</button>
+    <button onclick="showPage('mypicks')" id="nav-mypicks">My Picks</button>
+    <button onclick="showPage('allteams')" id="nav-allteams">All Teams</button>
+    <button onclick="showPage('results')" id="nav-results">Results</button>
+    <button onclick="showPage('admin')" id="nav-admin" class="hidden">Admin</button>
+</div>
+
+<!-- Login page -->
+<div id="loginPage" class="container" style="display:none">
+    <div class="login-container">
+        <div class="card">
+            <h2>&#x26BD; World Cup 2026 Comp</h2>
+            <div id="loginMsg"></div>
+            <div id="loginForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="loginUsername" placeholder="Your name" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+                </div>
+                <button class="btn btn-gold" onclick="doLogin()" style="width:100%;margin-bottom:10px">Login</button>
+                <button class="btn" onclick="showRegister()" style="width:100%">Register New Account</button>
+            </div>
+            <div id="registerForm" class="hidden">
+                <div class="form-group">
+                    <label>Choose a username</label>
+                    <input type="text" id="regUsername" placeholder="Your name">
+                </div>
+                <div class="form-group">
+                    <label>Choose a password</label>
+                    <input type="password" id="regPassword" placeholder="Password" onkeydown="if(event.key==='Enter')doRegister()">
+                </div>
+                <button class="btn btn-gold" onclick="doRegister()" style="width:100%;margin-bottom:10px">Create Account</button>
+                <button class="btn" onclick="showLoginForm()" style="width:100%">Back to Login</button>
+            </div>
+        </div>
+        <div class="rules-box" style="margin-top:20px">
+            <h3>How it works</h3>
+            <ul style="margin-left:20px;line-height:1.8">
+                <li>Pick <strong>1 team from each of the 8 brackets</strong></li>
+                <li>Earn points every time your team wins or draws</li>
+                <li>Points increase in the knockout rounds</li>
+                <li>Highest total wins!</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Main app -->
+<div id="appContainer" class="hidden">
+
+    <!-- Leaderboard Page -->
+    <div id="leaderboardPage" class="container hidden">
+        <div class="card">
+            <h2>&#x1F3C6; Leaderboard</h2>
+            <div id="lbApiStatus" style="margin-bottom:10px"></div>
+            <div class="leaderboard-wrap">
+                <table class="leaderboard" id="lbTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Player</th>
+                            <th>Points</th>
+                            <th>Teams</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lbBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Picks Page -->
+    <div id="mypicksPage" class="container hidden">
+        <div class="card">
+            <h2>&#x1F1FA;&#x1F1F3; My Picks</h2>
+            <div id="picksDeadlineNote" class="alert alert-info hidden"></div>
+            <div id="picksLockedNote" class="alert alert-warning hidden">Picks are locked. The deadline has passed.</div>
+            <div id="picksMsg"></div>
+
+            <div class="rules-box" style="margin-bottom:20px">
+                <h3>Points Scoring</h3>
+                <div class="scoring-grid">
+                    <div class="scoring-card"><div class="stage">Group Win</div><div class="pts">2</div><div class="pts-label">pts</div></div>
+                    <div class="scoring-card"><div class="stage">Group Draw</div><div class="pts">1</div><div class="pts-label">pt</div></div>
+                    <div class="scoring-card"><div class="stage">Last 16</div><div class="pts">5</div><div class="pts-label">pts / win</div></div>
+                    <div class="scoring-card"><div class="stage">Quarter Final</div><div class="pts">8</div><div class="pts-label">pts / win</div></div>
+                    <div class="scoring-card"><div class="stage">Semi Final</div><div class="pts">10</div><div class="pts-label">pts / win</div></div>
+                    <div class="scoring-card"><div class="stage">Final</div><div class="pts">20</div><div class="pts-label">pts / win</div></div>
+                </div>
+            </div>
+
+            <div id="pickCount" class="pick-count">Select 1 team from each bracket (0 / 8)</div>
+            <div id="bracketPicker"></div>
+            <div id="submitPicksArea" class="hidden" style="margin-top:20px;text-align:center">
+                <button class="btn btn-gold" onclick="submitPicks()" style="font-size:1.1em;padding:15px 40px">Save My Picks</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- All Teams Page -->
+    <div id="allteamsPage" class="container hidden">
+        <div class="card">
+            <h2>&#x1F465; All Teams</h2>
+            <p style="margin-bottom:15px;color:#666">Click any entry to see full details and points breakdown.</p>
+            <div id="allTeamsContainer" class="teams-grid"></div>
+        </div>
+    </div>
+
+    <!-- Results Page -->
+    <div id="resultsPage" class="container hidden">
+        <div class="card">
+            <h2>&#x1F4CB; Match Results</h2>
+            <div id="resultsContainer"></div>
+        </div>
+    </div>
+
+    <!-- Admin Page -->
+    <div id="adminPage" class="container hidden">
+        <div class="card admin-section">
+            <h2>&#x2699;&#xFE0F; Admin Panel</h2>
+            <div class="tab-bar" id="adminTabBar">
+                <div class="tab-btn active" onclick="showAdminTab('brackets')">Brackets</div>
+                <div class="tab-btn" onclick="showAdminTab('matches')">Match Results</div>
+                <div class="tab-btn" onclick="showAdminTab('api')">ESPN Live Scores</div>
+                <div class="tab-btn" onclick="showAdminTab('settings')">Settings</div>
+                <div class="tab-btn" onclick="showAdminTab('users')">Users</div>
+                <div class="tab-btn" onclick="showAdminTab('data')">Data</div>
+            </div>
+
+            <!-- Brackets Tab -->
+            <div id="adminTab-brackets">
+                <h3 style="margin-bottom:15px">Manage Brackets &amp; Teams</h3>
+                <p style="margin-bottom:15px;color:#666">Enter 4 teams per bracket (one per line). These are the teams players pick from.</p>
+                <div id="bracketAdminArea"></div>
+                <button class="btn btn-gold" onclick="saveBrackets()">Save All Brackets</button>
+                <div id="bracketSaveMsg" style="margin-top:10px"></div>
+            </div>
+
+            <!-- Match Results Tab -->
+            <div id="adminTab-matches" class="hidden">
+                <h3 style="margin-bottom:15px">Enter Match Results</h3>
+                <div style="background:#e8f0ff;border:2px solid #8B0000;border-radius:8px;padding:15px;margin-bottom:20px">
+                    <p style="font-size:0.9em">Enter each completed match. The leaderboard updates automatically. If API-Football is enabled, manual entries override fetched results.</p>
+                </div>
+                <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;align-items:end">
+                    <div>
+                        <label>Home Team</label>
+                        <input type="text" id="matchTeamA" placeholder="e.g. Brazil" list="teamsList">
+                        <datalist id="teamsList"></datalist>
+                    </div>
+                    <div>
+                        <label>Away Team</label>
+                        <input type="text" id="matchTeamB" placeholder="e.g. Argentina" list="teamsList">
+                    </div>
+                    <div>
+                        <label>Round</label>
+                        <select id="matchRound">
+                            <option value="group">Group Stage</option>
+                            <option value="r16">Last 16</option>
+                            <option value="qf">Quarter Final</option>
+                            <option value="sf">Semi Final</option>
+                            <option value="final">Final</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Result</label>
+                        <select id="matchResult">
+                            <option value="home">Home Win</option>
+                            <option value="draw">Draw</option>
+                            <option value="away">Away Win</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>&nbsp;</label>
+                        <button class="btn btn-gold" onclick="addMatchResult()">Add</button>
+                    </div>
+                </div>
+                <div id="matchEntryMsg" style="margin-bottom:10px"></div>
+                <div id="matchResultsList"></div>
+            </div>
+
+            <!-- ESPN Live Scores Tab -->
+            <div id="adminTab-api" class="hidden">
+                <h3 style="margin-bottom:15px">ESPN Live Score Configuration</h3>
+                <div style="background:#e8f0ff;border:2px solid #8B0000;border-radius:8px;padding:15px;margin-bottom:20px">
+                    <h4 style="margin-bottom:8px">&#x26A1; ESPN API &mdash; Free, No Key Required</h4>
+                    <p style="font-size:0.9em;line-height:1.6">ESPN exposes a public (unauthenticated) JSON scoreboard API for soccer &mdash; the same method used in the Masters golf comp. No account or API key needed. The app polls for completed fixtures every 90 seconds during match days.</p>
+                    <p style="margin-top:8px;font-size:0.85em;color:#555">Manual match results always override ESPN data. ESPN runs entirely client-side &mdash; zero extra cost.</p>
+                </div>
+                <div class="form-group">
+                    <label>Scoring Mode</label>
+                    <select id="apiMode" onchange="toggleApiMode()">
+                        <option value="manual">Manual Only</option>
+                        <option value="espn">ESPN API (Auto + Manual Override)</option>
+                    </select>
+                </div>
+                <div id="apiConfigFields" class="hidden">
+                    <div class="form-group">
+                        <label>ESPN League Slug</label>
+                        <input type="text" id="apiLeagueSlug" value="fifa.world" style="width:220px">
+                        <small style="display:block;margin-top:4px;color:#666">Default: <strong>fifa.world</strong> (FIFA World Cup). ESPN URL format: site.api.espn.com/apis/site/v2/sports/soccer/<em>SLUG</em>/scoreboard</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Refresh Interval (seconds, min 60)</label>
+                        <input type="number" id="apiInterval" value="90" min="60" max="600" style="width:120px">
+                    </div>
+                    <button class="btn" onclick="testEspnSoccer()" style="margin-right:8px">Test ESPN Fetch</button>
+                    <button class="btn" onclick="forceEspnFetch()">Fetch Now</button>
+                    <div id="apiTestResult" style="margin-top:10px"></div>
+                </div>
+                <button class="btn btn-gold" onclick="saveApiConfig()" style="margin-top:15px">Save Config</button>
+                <div id="apiSaveMsg" style="margin-top:10px"></div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="adminTab-settings" class="hidden">
+                <h3 style="margin-bottom:15px">Competition Settings</h3>
+                <div class="form-group">
+                    <label>Competition Name</label>
+                    <input type="text" id="settingName" value="World Cup 2026 Comp">
+                </div>
+                <div class="form-group">
+                    <label>Picks Deadline (players cannot change picks after this)</label>
+                    <input type="datetime-local" id="settingDeadline">
+                    <small style="color:#666">Set this to just before the first match kicks off.</small>
+                </div>
+                <div class="form-group">
+                    <label>New Admin Password</label>
+                    <input type="password" id="settingAdminPw" placeholder="Leave blank to keep current">
+                </div>
+                <button class="btn btn-gold" onclick="saveSettings()">Save Settings</button>
+                <div id="settingsSaveMsg" style="margin-top:10px"></div>
+            </div>
+
+            <!-- Users Tab -->
+            <div id="adminTab-users" class="hidden">
+                <h3 style="margin-bottom:15px">Registered Users</h3>
+                <div id="usersList"></div>
+            </div>
+
+            <!-- Data Tab -->
+            <div id="adminTab-data" class="hidden">
+                <h3 style="margin-bottom:15px">Data Management</h3>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+                    <button class="btn" onclick="exportData()">Export All Data (JSON)</button>
+                    <button class="btn btn-danger" onclick="confirmClearPicks()">Clear All Picks</button>
+                    <button class="btn btn-danger" onclick="confirmClearMatches()">Clear All Match Results</button>
+                </div>
+                <div id="dataMsg"></div>
+                <h4 style="margin-bottom:10px">Import Data</h4>
+                <div class="form-group">
+                    <label>Paste exported JSON to restore</label>
+                    <textarea id="importJson" rows="6" placeholder='{"settings":{},"brackets":{},"picks":{}...}'></textarea>
+                </div>
+                <button class="btn btn-gold" onclick="importData()">Import Data</button>
+            </div>
+        </div>
+    </div>
+
+</div><!-- end appContainer -->
+
+<!-- Team Detail Modal -->
+<div id="teamModal" class="modal-overlay hidden" onclick="closeModal(event)">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Team Details</h2>
+            <button class="modal-close" onclick="closeTeamModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+    </div>
+</div>
+
+<!-- Sync status -->
+<div id="syncStatus" class="sync-status connected">&#x25CF; Connected</div>
+
+<script>
+// ============================================================
+// FIREBASE CONFIG — replace with your own values
+// ============================================================
+const firebaseConfig = {
+    apiKey: "AIzaSyCp5fCDkZUFWFLP0ypNwRnE0YjlnAp4HGk",
+    authDomain: "bradyworldcup-33224.firebaseapp.com",
+    databaseURL: "https://bradyworldcup-33224-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "bradyworldcup-33224",
+    storageBucket: "bradyworldcup-33224.firebasestorage.app",
+    messagingSenderId: "481161094212",
+    appId: "1:481161094212:web:738a89860956eff7020811",
+    measurementId: "G-HFZMNDNKMS"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ============================================================
+// APP STATE
+// ============================================================
+let currentUser = null;
+let isAdmin = false;
+let appData = {
+    settings: { name: 'World Cup 2026 Comp', deadline: '', adminPassword: 'admin123' },
+    brackets: {},
+    picks: {},
+    matchResults: {},
+    apiConfig: { mode: 'manual', apiKey: '', leagueId: '1', season: '2026', interval: 90, enabled: false }
+};
+let tempPicks = {};
+let apiPollTimer = null;
+
+const ROUND_LABELS = { group: 'Group Stage', r16: 'Last 16', qf: 'Quarter Final', sf: 'Semi Final', final: 'Final' };
+const ROUND_POINTS = { group: { win: 2, draw: 1 }, r16: { win: 5 }, qf: { win: 8 }, sf: { win: 10 }, final: { win: 20 } };
+const ROUND_CLASS = { group: 'round-group', r16: 'round-r16', qf: 'round-qf', sf: 'round-sf', final: 'round-final' };
+const NUM_BRACKETS = 8;
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('load', () => {
+    const saved = sessionStorage.getItem('wcUser');
+    if (saved) {
+        const u = JSON.parse(saved);
+        currentUser = u.username;
+        isAdmin = u.isAdmin;
+    }
+    loadAllData();
+});
+
+function loadAllData() {
+    db.ref('/').once('value').then(snap => {
+        const d = snap.val() || {};
+        if (d.settings) appData.settings = { ...appData.settings, ...d.settings };
+        if (d.brackets) appData.brackets = d.brackets;
+        if (d.picks) appData.picks = d.picks;
+        if (d.matchResults) appData.matchResults = d.matchResults;
+        if (d.apiConfig) appData.apiConfig = { ...appData.apiConfig, ...d.apiConfig };
+
+        document.getElementById('loadingOverlay').style.display = 'none';
+        document.getElementById('mainHeader').style.display = '';
+        document.getElementById('lastUpdated').textContent = 'Last loaded: ' + new Date().toLocaleTimeString();
+
+        if (currentUser) {
+            showApp();
+        } else {
+            document.getElementById('loginPage').style.display = '';
+        }
+    }).catch(err => {
+        document.getElementById('loadingOverlay').innerHTML = '<div style="color:red;padding:20px">Failed to connect to Firebase.<br>Check your firebaseConfig in index.html.<br><br>' + err.message + '</div>';
+    });
+
+    // Listen for real-time updates
+    db.ref('/').on('value', snap => {
+        const d = snap.val() || {};
+        if (d.settings) appData.settings = { ...appData.settings, ...d.settings };
+        if (d.brackets) appData.brackets = d.brackets;
+        if (d.picks) appData.picks = d.picks;
+        if (d.matchResults) appData.matchResults = d.matchResults;
+        if (d.apiConfig) appData.apiConfig = { ...appData.apiConfig, ...d.apiConfig };
+        refreshCurrentPage();
+        document.getElementById('lastUpdated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+    });
+
+    db.ref('.info/connected').on('value', snap => {
+        const el = document.getElementById('syncStatus');
+        if (snap.val()) { el.className = 'sync-status connected'; el.textContent = '● Connected'; }
+        else { el.className = 'sync-status disconnected'; el.textContent = '● Disconnected'; }
+    });
+}
+
+// ============================================================
+// AUTH
+// ============================================================
+function showRegister() {
+    document.getElementById('loginForm').classList.add('hidden');
+    document.getElementById('registerForm').classList.remove('hidden');
+    document.getElementById('loginMsg').innerHTML = '';
+}
+function showLoginForm() {
+    document.getElementById('registerForm').classList.add('hidden');
+    document.getElementById('loginForm').classList.remove('hidden');
+    document.getElementById('loginMsg').innerHTML = '';
+}
+
+function doLogin() {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!username || !password) { showMsg('loginMsg', 'Enter username and password.', 'error'); return; }
+
+    // Admin login
+    if (username.toLowerCase() === 'admin' && password === appData.settings.adminPassword) {
+        currentUser = 'admin'; isAdmin = true;
+        sessionStorage.setItem('wcUser', JSON.stringify({ username: 'admin', isAdmin: true }));
+        showApp(); return;
+    }
+
+    const users = appData.picks ? Object.keys(appData.picks) : [];
+    db.ref('/users/' + slugify(username)).once('value').then(snap => {
+        if (!snap.exists()) { showMsg('loginMsg', 'User not found.', 'error'); return; }
+        const u = snap.val();
+        if (u.password !== hashPassword(password)) { showMsg('loginMsg', 'Incorrect password.', 'error'); return; }
+        currentUser = username; isAdmin = false;
+        sessionStorage.setItem('wcUser', JSON.stringify({ username, isAdmin: false }));
+        showApp();
+    });
+}
+
+function doRegister() {
+    const username = document.getElementById('regUsername').value.trim();
+    const password = document.getElementById('regPassword').value;
+    if (!username || !password) { showMsg('loginMsg', 'Fill in all fields.', 'error'); return; }
+    if (username.toLowerCase() === 'admin') { showMsg('loginMsg', 'That username is reserved.', 'error'); return; }
+    if (password.length < 4) { showMsg('loginMsg', 'Password must be at least 4 characters.', 'error'); return; }
+
+    const key = slugify(username);
+    db.ref('/users/' + key).once('value').then(snap => {
+        if (snap.exists()) { showMsg('loginMsg', 'Username already taken.', 'error'); return; }
+        db.ref('/users/' + key).set({ username, password: hashPassword(password), created: Date.now() }).then(() => {
+            currentUser = username; isAdmin = false;
+            sessionStorage.setItem('wcUser', JSON.stringify({ username, isAdmin: false }));
+            showApp();
+        });
+    });
+}
+
+function logout() {
+    currentUser = null; isAdmin = false;
+    sessionStorage.removeItem('wcUser');
+    stopApiPoll();
+    document.getElementById('appContainer').classList.add('hidden');
+    document.getElementById('mainNav').classList.add('hidden');
+    document.getElementById('loginPage').style.display = '';
+    document.getElementById('loginForm').classList.remove('hidden');
+    document.getElementById('registerForm').classList.add('hidden');
+    document.getElementById('loginUsername').value = '';
+    document.getElementById('loginPassword').value = '';
+}
+
+function showApp() {
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('appContainer').classList.remove('hidden');
+    document.getElementById('mainNav').classList.remove('hidden');
+    document.getElementById('userInfo').innerHTML = '<strong>' + esc(currentUser) + '</strong> <button class="btn btn-sm btn-gold" onclick="logout()">Logout</button>';
+    if (isAdmin) document.getElementById('nav-admin').classList.remove('hidden');
+    showPage('leaderboard');
+    startApiPollIfEnabled();
+}
+
+// ============================================================
+// PAGE ROUTING
+// ============================================================
+let currentPage = 'leaderboard';
+function showPage(page) {
+    ['leaderboard','mypicks','allteams','results','admin'].forEach(p => {
+        document.getElementById(p + 'Page').classList.add('hidden');
+        document.getElementById('nav-' + p) && document.getElementById('nav-' + p).classList.remove('active');
+    });
+    document.getElementById(page + 'Page').classList.remove('hidden');
+    document.getElementById('nav-' + page) && document.getElementById('nav-' + page).classList.add('active');
+    currentPage = page;
+    renderPage(page);
+}
+
+function refreshCurrentPage() {
+    if (currentPage) renderPage(currentPage);
+}
+
+function renderPage(page) {
+    if (page === 'leaderboard') renderLeaderboard();
+    if (page === 'mypicks') renderMyPicks();
+    if (page === 'allteams') renderAllTeams();
+    if (page === 'results') renderResults();
+    if (page === 'admin') renderAdmin();
+}
+
+// ============================================================
+// SCORING ENGINE
+// ============================================================
+function computePlayerPoints(playerKey) {
+    const playerPicks = appData.picks[playerKey] || {};
+    let total = 0;
+    const breakdown = {};
+
+    Object.entries(appData.matchResults || {}).forEach(([, match]) => {
+        const { teamA, teamB, result, round } = match;
+        const pts = ROUND_POINTS[round];
+        if (!pts) return;
+
+        Object.entries(playerPicks).forEach(([bk, team]) => {
+            if (!team) return;
+            const normalTeam = team.toLowerCase();
+            const aWon = result === 'home';
+            const bWon = result === 'away';
+            const isDraw = result === 'draw';
+
+            if (normalTeam === teamA.toLowerCase()) {
+                if (aWon && pts.win) { total += pts.win; breakdown[team] = (breakdown[team] || 0) + pts.win; }
+                else if (isDraw && pts.draw) { total += pts.draw; breakdown[team] = (breakdown[team] || 0) + pts.draw; }
+            }
+            if (normalTeam === teamB.toLowerCase()) {
+                if (bWon && pts.win) { total += pts.win; breakdown[team] = (breakdown[team] || 0) + pts.win; }
+                else if (isDraw && pts.draw) { total += pts.draw; breakdown[team] = (breakdown[team] || 0) + pts.draw; }
+            }
+        });
+    });
+    return { total, breakdown };
+}
+
+function getAllScores() {
+    return Object.entries(appData.picks).map(([key, picks]) => {
+        const { total, breakdown } = computePlayerPoints(key);
+        const displayName = Object.values(picks).length > 0
+            ? (appData.picks[key]._username || key)
+            : key;
+        return { key, displayName: appData.picks[key]._username || key, picks, total, breakdown };
+    }).filter(p => p.key !== '_username').sort((a, b) => b.total - a.total);
+}
+
+// ============================================================
+// LEADERBOARD
+// ============================================================
+function renderLeaderboard() {
+    const scores = getAllScores();
+    const tbody = document.getElementById('lbBody');
+    const locked = isDeadlinePassed();
+    const picksVisible = isAdmin || locked;
+
+    if (!scores.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#999">No entries yet. Be the first to register and pick your teams!</td></tr>';
+        return;
+    }
+    tbody.innerHTML = scores.map((p, i) => {
+        const isMe = p.key === slugify(currentUser);
+        const canSee = picksVisible || isMe;
+        const pickCount = Object.keys(p.picks).filter(k => !k.startsWith('_')).length;
+        const pickList = canSee
+            ? Object.entries(p.picks).filter(([k]) => !k.startsWith('_')).map(([,t]) => esc(t)).join(', ') || '<em>No picks</em>'
+            : '<em style="color:#aaa">Hidden until deadline</em>';
+        const clickable = canSee ? 'clickable' : '';
+        const rowClass = (i === 0 ? 'leader-row ' : '') + clickable;
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+        return `<tr class="${rowClass}" ${canSee ? `onclick="showTeamModal('${p.key}')"` : ''} style="${isMe ? 'font-weight:bold' : ''}">
+            <td>${medal}</td>
+            <td>${esc(p.displayName)}${isMe ? ' <span style="color:#8B0000;font-size:0.8em">(you)</span>' : ''}</td>
+            <td><strong style="font-size:1.2em;color:#8B0000">${locked ? p.total : (isMe ? p.total : '—')}</strong></td>
+            <td style="font-size:0.85em;color:#666">${pickList}</td>
+            <td><span class="status-badge ${pickCount === NUM_BRACKETS ? 'status-submitted' : 'status-pending'}">${pickCount === NUM_BRACKETS ? 'Complete' : 'Partial'}</span></td>
+        </tr>`;
+    }).join('');
+}
+
+// ============================================================
+// MY PICKS
+// ============================================================
+function isDeadlinePassed() {
+    if (!appData.settings.deadline) return false;
+    return new Date() > new Date(appData.settings.deadline);
+}
+
+function renderMyPicks() {
+    const locked = isDeadlinePassed();
+    const deadline = appData.settings.deadline;
+    const savedPicks = appData.picks[slugify(currentUser)] || {};
+    tempPicks = { ...savedPicks };
+
+    document.getElementById('picksLockedNote').classList.toggle('hidden', !locked);
+    if (deadline && !locked) {
+        document.getElementById('picksDeadlineNote').classList.remove('hidden');
+        document.getElementById('picksDeadlineNote').textContent = 'Picks deadline: ' + new Date(deadline).toLocaleString();
+    } else {
+        document.getElementById('picksDeadlineNote').classList.add('hidden');
+    }
+
+    const brackets = appData.brackets;
+    const bracketKeys = Object.keys(brackets).sort();
+
+    if (!bracketKeys.length) {
+        document.getElementById('bracketPicker').innerHTML = '<div class="alert alert-info">Brackets have not been set up yet. Check back soon!</div>';
+        document.getElementById('submitPicksArea').classList.add('hidden');
+        updatePickCount();
+        return;
+    }
+
+    document.getElementById('bracketPicker').innerHTML = bracketKeys.map(bk => {
+        const bracket = brackets[bk];
+        const teams = (bracket.teams || []).filter(t => t.trim());
+        const picked = tempPicks[bk] || '';
+        const hasPick = !!picked;
+        return `<div class="bracket-section">
+            <div class="bracket-header ${hasPick ? 'picked' : ''}">
+                <span>${esc(bracket.name || bk)}</span>
+                <span style="font-size:0.85em">${hasPick ? '✓ ' + esc(picked) : 'Pick 1'}</span>
+            </div>
+            <div class="bracket-teams">
+                ${teams.map(t => `<div class="team-option ${tempPicks[bk] === t ? 'selected' : ''} ${locked ? 'disabled' : ''}"
+                    onclick="${locked ? '' : `pickTeam('${bk}','${t.replace(/'/g,"\\'")}',this)`}">
+                    <span>${countryFlag(t)}</span><span>${esc(t)}</span>
+                </div>`).join('')}
+            </div>
+        </div>`;
+    }).join('');
+
+    updatePickCount();
+    document.getElementById('submitPicksArea').classList.toggle('hidden', locked);
+}
+
+function pickTeam(bracketKey, team, el) {
+    if (isDeadlinePassed()) return;
+    tempPicks[bracketKey] = team;
+    renderMyPicks();
+}
+
+function updatePickCount() {
+    const count = Object.entries(tempPicks).filter(([k, v]) => !k.startsWith('_') && v).length;
+    const el = document.getElementById('pickCount');
+    el.textContent = `Selected ${count} / ${NUM_BRACKETS} brackets`;
+    el.className = 'pick-count' + (count === NUM_BRACKETS ? ' full' : '');
+}
+
+function submitPicks() {
+    const count = Object.entries(tempPicks).filter(([k, v]) => !k.startsWith('_') && v).length;
+    if (count < NUM_BRACKETS) {
+        showMsg('picksMsg', `Please pick a team from all ${NUM_BRACKETS} brackets. You have ${count} so far.`, 'error');
+        return;
+    }
+    const key = slugify(currentUser);
+    const toSave = { ...tempPicks, _username: currentUser };
+    db.ref('/picks/' + key).set(toSave).then(() => {
+        showMsg('picksMsg', 'Picks saved!', 'success');
+        appData.picks[key] = toSave;
+    }).catch(e => showMsg('picksMsg', 'Save failed: ' + e.message, 'error'));
+}
+
+// ============================================================
+// ALL TEAMS
+// ============================================================
+function renderAllTeams() {
+    const scores = getAllScores();
+    const container = document.getElementById('allTeamsContainer');
+    const locked = isDeadlinePassed();
+    const picksVisible = isAdmin || locked;
+
+    if (!scores.length) {
+        container.innerHTML = '<p style="color:#666">No entries yet.</p>';
+        return;
+    }
+
+    if (!picksVisible) {
+        const deadline = appData.settings.deadline ? new Date(appData.settings.deadline).toLocaleString() : 'the deadline';
+        container.innerHTML = `<div class="alert alert-warning" style="grid-column:1/-1">
+            &#x1F512; Picks are hidden until ${esc(deadline)} to keep things fair. You can see your own picks on the <strong>My Picks</strong> page.
+            <br><br>Entered so far: <strong>${scores.length}</strong> player(s).
+        </div>`;
+        return;
+    }
+
+    container.innerHTML = scores.map((p, i) => {
+        const pickEntries = Object.entries(p.picks).filter(([k]) => !k.startsWith('_'));
+        const picks = pickEntries.map(([, t]) => `<span>${esc(t)}</span>`).join('');
+        return `<div class="team-card" onclick="showTeamModal('${p.key}')">
+            <div style="display:flex;justify-content:space-between;align-items:start">
+                <h4>${i === 0 ? '🥇 ' : i === 1 ? '🥈 ' : i === 2 ? '🥉 ' : ''}${esc(p.displayName)}</h4>
+                <span class="card-points">${p.total} pts</span>
+            </div>
+            <div class="picks-list" style="clear:both;margin-top:6px">${picks || '<em>No picks yet</em>'}</div>
+        </div>`;
+    }).join('');
+}
+
+// ============================================================
+// TEAM MODAL
+// ============================================================
+function showTeamModal(playerKey) {
+    const locked = isDeadlinePassed();
+    const isMe = playerKey === slugify(currentUser);
+    if (!isAdmin && !locked && !isMe) return; // picks hidden before deadline
+
+    const p = appData.picks[playerKey] || {};
+    const displayName = p._username || playerKey;
+    const { total, breakdown } = computePlayerPoints(playerKey);
+    const brackets = appData.brackets;
+
+    let rows = Object.entries(p).filter(([k]) => !k.startsWith('_')).map(([bk, team]) => {
+        const pts = breakdown[team] || 0;
+        const bracketName = brackets[bk] ? brackets[bk].name : bk;
+        return `<tr><td>${esc(bracketName)}</td><td>${countryFlag(team)} ${esc(team)}</td><td class="pts-col">${pts}</td></tr>`;
+    }).join('');
+
+    document.getElementById('modalTitle').textContent = displayName + ' — ' + total + ' pts';
+    document.getElementById('modalBody').innerHTML = `
+        <table class="detail-table">
+            <thead><tr><th>Bracket</th><th>Team</th><th style="text-align:right">Points</th></tr></thead>
+            <tbody>${rows}</tbody>
+            <tfoot><tr><td colspan="2"><strong>Total</strong></td><td class="pts-col"><strong>${total}</strong></td></tr></tfoot>
+        </table>
+        <h4 style="margin-top:20px;margin-bottom:10px;color:#8B0000">Points Breakdown by Match</h4>
+        ${buildMatchBreakdown(playerKey)}`;
+    document.getElementById('teamModal').classList.remove('hidden');
+}
+
+function buildMatchBreakdown(playerKey) {
+    const p = appData.picks[playerKey] || {};
+    const myTeams = Object.entries(p).filter(([k]) => !k.startsWith('_')).map(([, t]) => t.toLowerCase());
+    const relevant = Object.entries(appData.matchResults || {}).filter(([, m]) => {
+        return myTeams.includes(m.teamA.toLowerCase()) || myTeams.includes(m.teamB.toLowerCase());
+    });
+    if (!relevant.length) return '<p style="color:#999">No matches involving your teams yet.</p>';
+    return `<table class="detail-table">
+        <thead><tr><th>Match</th><th>Round</th><th>Result</th><th style="text-align:right">Pts</th></tr></thead>
+        <tbody>${relevant.map(([, m]) => {
+            const pts = ROUND_POINTS[m.round] || {};
+            const aWon = m.result === 'home'; const bWon = m.result === 'away'; const draw = m.result === 'draw';
+            let earned = 0; let winner = draw ? 'Draw' : aWon ? m.teamA : m.teamB;
+            if (myTeams.includes(m.teamA.toLowerCase()) && aWon) earned = pts.win || 0;
+            if (myTeams.includes(m.teamB.toLowerCase()) && bWon) earned = pts.win || 0;
+            if ((myTeams.includes(m.teamA.toLowerCase()) || myTeams.includes(m.teamB.toLowerCase())) && draw) earned = pts.draw || 0;
+            return `<tr>
+                <td>${esc(m.teamA)} vs ${esc(m.teamB)}</td>
+                <td><span class="round-badge ${ROUND_CLASS[m.round]}">${ROUND_LABELS[m.round]}</span></td>
+                <td>${esc(winner)}</td>
+                <td style="text-align:right;font-weight:bold;color:${earned>0?'#28a745':'#999'}">${earned > 0 ? '+' + earned : '0'}</td>
+            </tr>`;
+        }).join('')}</tbody>
+    </table>`;
+}
+
+function closeTeamModal() { document.getElementById('teamModal').classList.add('hidden'); }
+function closeModal(e) { if (e.target.id === 'teamModal') closeTeamModal(); }
+
+// ============================================================
+// RESULTS PAGE
+// ============================================================
+function renderResults() {
+    const container = document.getElementById('resultsContainer');
+    const rounds = ['final', 'sf', 'qf', 'r16', 'group'];
+    const results = Object.entries(appData.matchResults || {});
+    if (!results.length) {
+        container.innerHTML = '<p style="color:#666">No results entered yet.</p>';
+        return;
+    }
+    let html = '';
+    rounds.forEach(round => {
+        const rMatches = results.filter(([, m]) => m.round === round);
+        if (!rMatches.length) return;
+        html += `<h3 style="margin:20px 0 10px;color:#8B0000">${ROUND_LABELS[round]}</h3>
+        <table class="results-table"><thead><tr><th>Home</th><th>Result</th><th>Away</th><th>Round</th></tr></thead><tbody>`;
+        rMatches.forEach(([, m]) => {
+            const aWon = m.result === 'home'; const bWon = m.result === 'away'; const draw = m.result === 'draw';
+            html += `<tr>
+                <td class="${aWon ? 'result-win' : ''}">${esc(m.teamA)}</td>
+                <td class="${draw ? 'result-draw' : ''}">${aWon ? '🏆 Win' : bWon ? 'Loss' : '🤝 Draw'}</td>
+                <td class="${bWon ? 'result-win' : ''}">${esc(m.teamB)}</td>
+                <td><span class="round-badge ${ROUND_CLASS[round]}">${ROUND_LABELS[round]}</span></td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+    });
+    container.innerHTML = html;
+}
+
+// ============================================================
+// ADMIN
+// ============================================================
+let currentAdminTab = 'brackets';
+function showAdminTab(tab) {
+    document.querySelectorAll('#adminTabBar .tab-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    ['brackets','matches','api','settings','users','data'].forEach(t => {
+        document.getElementById('adminTab-' + t).classList.toggle('hidden', t !== tab);
+    });
+    currentAdminTab = tab;
+    if (tab === 'brackets') renderBracketAdmin();
+    if (tab === 'matches') renderMatchAdmin();
+    if (tab === 'settings') loadSettingsForm();
+    if (tab === 'users') renderUsersAdmin();
+    if (tab === 'api') loadApiForm();
+}
+
+function renderAdmin() {
+    renderBracketAdmin();
+}
+
+function renderBracketAdmin() {
+    const area = document.getElementById('bracketAdminArea');
+    let html = '';
+    for (let i = 1; i <= NUM_BRACKETS; i++) {
+        const bk = 'bracket' + i;
+        const b = appData.brackets[bk] || { name: 'Bracket ' + i, teams: [] };
+        html += `<div class="bracket-admin">
+            <div class="bracket-admin-header">
+                <input type="text" id="bname-${bk}" value="${esc(b.name)}" placeholder="Bracket ${i} name">
+            </div>
+            <textarea id="bteams-${bk}" placeholder="Enter 4 teams, one per line">${(b.teams || []).join('\n')}</textarea>
+        </div>`;
+    }
+    area.innerHTML = html;
+}
+
+function saveBrackets() {
+    const brackets = {};
+    for (let i = 1; i <= NUM_BRACKETS; i++) {
+        const bk = 'bracket' + i;
+        const name = document.getElementById('bname-' + bk).value.trim() || 'Bracket ' + i;
+        const teams = document.getElementById('bteams-' + bk).value.split('\n').map(t => t.trim()).filter(t => t);
+        brackets[bk] = { name, teams };
+    }
+    db.ref('/brackets').set(brackets).then(() => {
+        appData.brackets = brackets;
+        showMsg('bracketSaveMsg', 'Brackets saved!', 'success');
+        // Update teams datalist for match entry
+        updateTeamsDatalist();
+    }).catch(e => showMsg('bracketSaveMsg', 'Error: ' + e.message, 'error'));
+}
+
+function updateTeamsDatalist() {
+    const allTeams = [];
+    Object.values(appData.brackets).forEach(b => (b.teams || []).forEach(t => allTeams.push(t)));
+    const dl = document.getElementById('teamsList');
+    if (dl) dl.innerHTML = [...new Set(allTeams)].map(t => `<option value="${esc(t)}">`).join('');
+}
+
+function renderMatchAdmin() {
+    updateTeamsDatalist();
+    const results = Object.entries(appData.matchResults || {});
+    const container = document.getElementById('matchResultsList');
+    if (!results.length) { container.innerHTML = '<p style="color:#999;margin-top:10px">No results entered yet.</p>'; return; }
+
+    container.innerHTML = `<table class="results-table" style="margin-top:15px">
+        <thead><tr><th>Home</th><th>Away</th><th>Round</th><th>Result</th><th></th></tr></thead>
+        <tbody>${results.map(([key, m]) =>
+            `<tr>
+                <td>${esc(m.teamA)}</td><td>${esc(m.teamB)}</td>
+                <td><span class="round-badge ${ROUND_CLASS[m.round]}">${ROUND_LABELS[m.round]}</span></td>
+                <td>${m.result === 'home' ? esc(m.teamA) + ' Win' : m.result === 'away' ? esc(m.teamB) + ' Win' : 'Draw'}</td>
+                <td><button class="btn btn-danger btn-sm" onclick="deleteMatch('${key}')">Delete</button></td>
+            </tr>`
+        ).join('')}</tbody>
+    </table>`;
+}
+
+function addMatchResult() {
+    const teamA = document.getElementById('matchTeamA').value.trim();
+    const teamB = document.getElementById('matchTeamB').value.trim();
+    const round = document.getElementById('matchRound').value;
+    const result = document.getElementById('matchResult').value;
+    if (!teamA || !teamB) { showMsg('matchEntryMsg', 'Enter both team names.', 'error'); return; }
+    if (teamA.toLowerCase() === teamB.toLowerCase()) { showMsg('matchEntryMsg', 'Teams must be different.', 'error'); return; }
+    const key = slugify(teamA + '-vs-' + teamB + '-' + round + '-' + Date.now());
+    db.ref('/matchResults/' + key).set({ teamA, teamB, round, result, added: Date.now() }).then(() => {
+        document.getElementById('matchTeamA').value = '';
+        document.getElementById('matchTeamB').value = '';
+        showMsg('matchEntryMsg', 'Result added!', 'success');
+        renderMatchAdmin();
+    }).catch(e => showMsg('matchEntryMsg', 'Error: ' + e.message, 'error'));
+}
+
+function deleteMatch(key) {
+    if (!confirm('Delete this match result?')) return;
+    db.ref('/matchResults/' + key).remove().then(() => renderMatchAdmin());
+}
+
+function loadApiForm() {
+    const c = appData.apiConfig;
+    document.getElementById('apiMode').value = c.mode || 'manual';
+    document.getElementById('apiLeagueSlug').value = c.leagueSlug || 'fifa.world';
+    document.getElementById('apiInterval').value = c.interval || 90;
+    toggleApiMode();
+}
+
+function toggleApiMode() {
+    const mode = document.getElementById('apiMode').value;
+    document.getElementById('apiConfigFields').classList.toggle('hidden', mode !== 'espn');
+}
+
+function saveApiConfig() {
+    const config = {
+        mode: document.getElementById('apiMode').value,
+        leagueSlug: document.getElementById('apiLeagueSlug').value.trim() || 'fifa.world',
+        interval: parseInt(document.getElementById('apiInterval').value) || 90,
+        enabled: document.getElementById('apiMode').value === 'espn'
+    };
+    db.ref('/apiConfig').set(config).then(() => {
+        appData.apiConfig = config;
+        showMsg('apiSaveMsg', 'Config saved!', 'success');
+        startApiPollIfEnabled();
+    }).catch(e => showMsg('apiSaveMsg', 'Error: ' + e.message, 'error'));
+}
+
+function testEspnSoccer() {
+    const slug = document.getElementById('apiLeagueSlug').value.trim() || 'fifa.world';
+    document.getElementById('apiTestResult').innerHTML = '<div class="alert alert-info">Fetching from ESPN...</div>';
+    fetchEspnScoreboard(slug).then(matches => {
+        if (!matches.length) {
+            document.getElementById('apiTestResult').innerHTML = '<div class="alert alert-warning">Connected but no completed matches found yet. This is expected before the tournament starts.</div>';
+            return;
+        }
+        const sample = matches.slice(0, 3).map(m => `${m.teamA} vs ${m.teamB} (${m.result})`).join('<br>');
+        document.getElementById('apiTestResult').innerHTML = `<div class="alert alert-success">Connected! Found ${matches.length} completed match(es).<br><br>${sample}</div>`;
+    }).catch(e => {
+        document.getElementById('apiTestResult').innerHTML = `<div class="alert alert-error">Failed: ${e.message}</div>`;
+    });
+}
+
+function forceEspnFetch() {
+    fetchApiFootballResults();
+    showMsg('apiSaveMsg', 'Fetching now...', 'info');
+}
+
+function loadSettingsForm() {
+    document.getElementById('settingName').value = appData.settings.name || 'World Cup 2026 Comp';
+    if (appData.settings.deadline) {
+        // Convert to local datetime-local format
+        const d = new Date(appData.settings.deadline);
+        const pad = n => String(n).padStart(2, '0');
+        document.getElementById('settingDeadline').value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+}
+
+function saveSettings() {
+    const pw = document.getElementById('settingAdminPw').value;
+    const settings = {
+        name: document.getElementById('settingName').value.trim() || 'World Cup 2026 Comp',
+        deadline: document.getElementById('settingDeadline').value ? new Date(document.getElementById('settingDeadline').value).toISOString() : '',
+        adminPassword: pw ? pw : appData.settings.adminPassword
+    };
+    db.ref('/settings').set(settings).then(() => {
+        appData.settings = settings;
+        showMsg('settingsSaveMsg', 'Settings saved!', 'success');
+    }).catch(e => showMsg('settingsSaveMsg', 'Error: ' + e.message, 'error'));
+}
+
+function renderUsersAdmin() {
+    db.ref('/users').once('value').then(snap => {
+        const users = snap.val() || {};
+        const entries = Object.entries(users);
+        if (!entries.length) { document.getElementById('usersList').innerHTML = '<p style="color:#666">No registered users.</p>'; return; }
+        document.getElementById('usersList').innerHTML = `<table class="results-table">
+            <thead><tr><th>Username</th><th>Registered</th><th>Picks</th><th></th></tr></thead>
+            <tbody>${entries.map(([key, u]) => {
+                const picks = appData.picks[key] || {};
+                const pickCount = Object.keys(picks).filter(k => !k.startsWith('_')).length;
+                return `<tr><td>${esc(u.username)}</td><td>${u.created ? new Date(u.created).toLocaleDateString() : '-'}</td>
+                    <td>${pickCount}/${NUM_BRACKETS}</td>
+                    <td><button class="btn btn-danger btn-sm" onclick="deleteUser('${key}')">Delete</button></td></tr>`;
+            }).join('')}</tbody>
+        </table>`;
+    });
+}
+
+function deleteUser(key) {
+    if (!confirm('Delete this user and their picks?')) return;
+    Promise.all([db.ref('/users/' + key).remove(), db.ref('/picks/' + key).remove()])
+        .then(() => renderUsersAdmin());
+}
+
+// ============================================================
+// ESPN SOCCER POLLING
+// ============================================================
+function startApiPollIfEnabled() {
+    stopApiPoll();
+    if (!isAdmin) return; // Only admin drives the sync
+    const c = appData.apiConfig;
+    if (!c.enabled || c.mode !== 'espn') return;
+    const interval = Math.max(60, c.interval || 90) * 1000;
+    fetchApiFootballResults();
+    apiPollTimer = setInterval(fetchApiFootballResults, interval);
+}
+
+function stopApiPoll() {
+    if (apiPollTimer) { clearInterval(apiPollTimer); apiPollTimer = null; }
+}
+
+function fetchEspnScoreboard(slug) {
+    const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard`;
+    return fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            const matches = [];
+            (data.events || []).forEach(event => {
+                const competition = event.competitions && event.competitions[0];
+                if (!competition) return;
+                if (competition.status.type.completed !== true) return;
+                const comps = competition.competitors;
+                if (!comps || comps.length < 2) return;
+                const home = comps.find(c => c.homeAway === 'home');
+                const away = comps.find(c => c.homeAway === 'away');
+                if (!home || !away) return;
+                const hg = parseInt(home.score) || 0;
+                const ag = parseInt(away.score) || 0;
+                const result = hg > ag ? 'home' : ag > hg ? 'away' : 'draw';
+                const round = mapEspnRound(event.name || '');
+                matches.push({
+                    teamA: home.team.displayName,
+                    teamB: away.team.displayName,
+                    result, round,
+                    espnId: event.id
+                });
+            });
+            return matches;
+        });
+}
+
+function fetchApiFootballResults() {
+    const c = appData.apiConfig;
+    const slug = c.leagueSlug || 'fifa.world';
+    fetchEspnScoreboard(slug).then(matches => {
+        const updates = {};
+        matches.forEach(m => {
+            const manualKey = findManualMatch(m.teamA, m.teamB);
+            if (!manualKey) {
+                const key = 'espn-' + m.espnId;
+                updates[key] = { teamA: m.teamA, teamB: m.teamB, round: m.round, result: m.result, source: 'espn' };
+            }
+        });
+        if (Object.keys(updates).length) {
+            db.ref('/matchResults').update(updates);
+        }
+        const lbStatus = document.getElementById('lbApiStatus');
+        if (lbStatus) lbStatus.innerHTML = '<span style="font-size:0.85em;color:#28a745">&#x26A1; Live via ESPN &mdash; updated ' + new Date().toLocaleTimeString() + '</span>';
+    }).catch(() => {}); // Silent fail — manual results still work
+}
+
+function mapEspnRound(eventName) {
+    const n = eventName.toLowerCase();
+    if (n.includes('final') && n.includes('semi')) return 'sf';
+    if (n.includes('quarter')) return 'qf';
+    if (n.includes('round of 16') || n.includes('last 16')) return 'r16';
+    if (n.includes('final')) return 'final';
+    return 'group';
+}
+
+function findManualMatch(teamA, teamB) {
+    return Object.entries(appData.matchResults || {}).find(([k, m]) => {
+        if (k.startsWith('api-')) return false;
+        return (m.teamA.toLowerCase() === teamA.toLowerCase() && m.teamB.toLowerCase() === teamB.toLowerCase()) ||
+               (m.teamA.toLowerCase() === teamB.toLowerCase() && m.teamB.toLowerCase() === teamA.toLowerCase());
+    });
+}
+
+// ============================================================
+// DATA IMPORT / EXPORT
+// ============================================================
+function exportData() {
+    db.ref('/').once('value').then(snap => {
+        const data = JSON.stringify(snap.val(), null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url;
+        a.download = 'worldcup-comp-backup-' + new Date().toISOString().slice(0,10) + '.json';
+        a.click(); URL.revokeObjectURL(url);
+    });
+}
+
+function importData() {
+    const raw = document.getElementById('importJson').value.trim();
+    if (!raw) return;
+    try {
+        const data = JSON.parse(raw);
+        db.ref('/').set(data).then(() => showMsg('dataMsg', 'Data imported!', 'success'))
+            .catch(e => showMsg('dataMsg', 'Error: ' + e.message, 'error'));
+    } catch (e) {
+        showMsg('dataMsg', 'Invalid JSON: ' + e.message, 'error');
+    }
+}
+
+function confirmClearPicks() {
+    if (!confirm('Clear ALL player picks? This cannot be undone.')) return;
+    db.ref('/picks').remove().then(() => showMsg('dataMsg', 'All picks cleared.', 'success'));
+}
+
+function confirmClearMatches() {
+    if (!confirm('Clear ALL match results? This cannot be undone.')) return;
+    db.ref('/matchResults').remove().then(() => showMsg('dataMsg', 'All match results cleared.', 'success'));
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function showMsg(id, text, type) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = `<div class="alert alert-${type}">${esc(text)}</div>`;
+    if (type === 'success') setTimeout(() => { if (el) el.innerHTML = ''; }, 4000);
+}
+
+function slugify(str) {
+    return (str || '').toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+}
+
+function esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function hashPassword(pw) {
+    // Simple hash — fine for a friend-group competition
+    let h = 0;
+    for (let i = 0; i < pw.length; i++) { h = ((h << 5) - h) + pw.charCodeAt(i); h |= 0; }
+    return 'h' + Math.abs(h).toString(16);
+}
+
+function countryFlag(name) {
+    const flags = {
+        'brazil':'🇧🇷','argentina':'🇦🇷','france':'🇫🇷','england':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','spain':'🇪🇸','germany':'🇩🇪',
+        'netherlands':'🇳🇱','portugal':'🇵🇹','belgium':'🇧🇪','denmark':'🇩🇰','croatia':'🇭🇷','uruguay':'🇺🇾',
+        'serbia':'🇷🇸','senegal':'🇸🇳','switzerland':'🇨🇭','usa':'🇺🇸','mexico':'🇲🇽','poland':'🇵🇱',
+        'canada':'🇨🇦','wales':'🏴󠁧󠁢󠁷󠁬󠁳󠁿','ecuador':'🇪🇨','morocco':'🇲🇦','japan':'🇯🇵','south korea':'🇰🇷',
+        'cameroon':'🇨🇲','qatar':'🇶🇦','ghana':'🇬🇭','australia':'🇦🇺','iran':'🇮🇷','tunisia':'🇹🇳',
+        'saudi arabia':'🇸🇦','costa rica':'🇨🇷','colombia':'🇨🇴','chile':'🇨🇱','peru':'🇵🇪',
+        'nigeria':'🇳🇬','egypt':'🇪🇬','ivory coast':'🇨🇮',"côte d'ivoire":'🇨🇮','turkey':'🇹🇷',
+        'austria':'🇦🇹','ukraine':'🇺🇦','russia':'🇷🇺','sweden':'🇸🇪','norway':'🇳🇴',
+        'scotland':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','ireland':'🇮🇪','new zealand':'🇳🇿','venezuela':'🇻🇪','bolivia':'🇧🇴',
+        'paraguay':'🇵🇾','algeria':'🇩🇿','mali':'🇲🇱','kenya':'🇰🇪','honduras':'🇭🇳','panama':'🇵🇦',
+    };
+    return flags[name.toLowerCase()] || '🏳️';
+}
+</script>
+</body>
+</html>
