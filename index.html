@@ -8,6 +8,10 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script type="module">
+        import { polyfillCountryFlagEmojis } from "https://cdn.skypack.dev/country-flag-emoji-polyfill";
+        polyfillCountryFlagEmojis();
+    </script>
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -31,7 +35,7 @@
         }
 
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-family: "Twemoji Country Flags", 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: linear-gradient(160deg, var(--navy) 0%, #112255 60%, #0b1d35 100%);
             min-height: 100vh;
             color: var(--text);
@@ -290,7 +294,7 @@
         }
 
         .hidden { display: none !important; }
-        #lastUpdated { color: rgba(255,255,255,0.45); font-size: 0.82em; margin-top: 4px; }
+        #deadlineBanner { color: rgba(255,255,255,0.45); font-size: 0.82em; margin-top: 4px; }
 
         /* ============ INSIGHTS ============ */
         .oracle-card {
@@ -433,12 +437,13 @@
 <div class="header" id="mainHeader" style="display:none">
     <h1>&#x26BD; World Cup 2026</h1>
     <div class="subtitle">Pick your 8 teams &mdash; one from each bracket</div>
-    <div id="lastUpdated"></div>
+    <div id="deadlineBanner"></div>
     <div class="user-info" id="userInfo"></div>
 </div>
 
 <!-- Nav -->
 <div class="nav hidden" id="mainNav">
+    <button onclick="showPage('home')" id="nav-home">🏠 Home</button>
     <button onclick="showPage('leaderboard')" id="nav-leaderboard">🏆 Leaderboard</button>
     <button onclick="showPage('mypicks')" id="nav-mypicks">🎯 My Picks</button>
     <button onclick="showPage('allteams')" id="nav-allteams">👥 All Teams</button>
@@ -493,6 +498,49 @@
 
 <!-- Main app -->
 <div id="appContainer" class="hidden">
+
+    <!-- Home Page -->
+    <div id="homePage" class="container hidden">
+        <div class="card" style="max-width:700px;margin:0 auto">
+            <h2 id="homeGreeting">⚽ Welcome to World Cup 2026!</h2>
+            <p style="color:#64748b;margin-bottom:20px">Here's everything you need to know to play.</p>
+
+            <div class="rules-box" style="margin-bottom:24px">
+                <h3>📋 How It Works</h3>
+                <ul style="margin-left:20px;line-height:2">
+                    <li>You are assigned <strong>8 brackets</strong>, each containing 4 teams</li>
+                    <li>Pick <strong>1 team from each bracket</strong> before the deadline</li>
+                    <li>Earn points every time your team <strong>wins or draws</strong> in the tournament</li>
+                    <li>Points are worth more in later rounds — it pays to have a good team go deep!</li>
+                    <li>The player with the <strong>highest total at the end wins</strong> 🏆</li>
+                    <li>Picks are <strong>hidden from other players</strong> until the deadline passes — so no copying!</li>
+                </ul>
+            </div>
+
+            <div class="rules-box" style="margin-bottom:24px">
+                <h3>🏅 Points Scoring</h3>
+                <div class="scoring-grid">
+                    <div class="scoring-card"><div class="stage">Group Win</div><div class="pts">2</div><div class="pts-label">pts</div></div>
+                    <div class="scoring-card"><div class="stage">Group Draw</div><div class="pts">1</div><div class="pts-label">pt</div></div>
+                    <div class="scoring-card"><div class="stage">Last 16</div><div class="pts">5</div><div class="pts-label">pts / win</div></div>
+                    <div class="scoring-card"><div class="stage">Quarter Final</div><div class="pts">8</div><div class="pts-label">pts / win</div></div>
+                    <div class="scoring-card"><div class="stage">Semi Final</div><div class="pts">10</div><div class="pts-label">pts / win</div></div>
+                    <div class="scoring-card"><div class="stage">Final</div><div class="pts">20</div><div class="pts-label">pts / win</div></div>
+                </div>
+                <p style="color:#64748b;font-size:0.88em;margin-top:10px">⚠️ Knockout rounds (Last 16 onwards) have no draws — the winner goes through.</p>
+            </div>
+
+            <div class="rules-box">
+                <h3>💡 Example</h3>
+                <p style="line-height:1.8">If you picked <strong>Brazil</strong> and they win 3 group games (+6 pts), then win the Last 16 (+5 pts) and Quarter Final (+8 pts) — that's already <strong>19 points</strong> from one team alone. Pick wisely!</p>
+            </div>
+
+            <div style="text-align:center;margin-top:28px">
+                <button class="btn btn-gold" onclick="showPage('mypicks')" style="padding:12px 32px;font-size:1em">🎯 Go to My Picks</button>
+                <button class="btn" onclick="showPage('leaderboard')" style="padding:12px 32px;font-size:1em;margin-left:10px">🏆 View Leaderboard</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Leaderboard Page -->
     <div id="leaderboardPage" class="container hidden">
@@ -842,12 +890,19 @@ function loadAllData() {
 
         document.getElementById('loadingOverlay').style.display = 'none';
         document.getElementById('mainHeader').style.display = '';
-        document.getElementById('lastUpdated').textContent = 'Last loaded: ' + new Date().toLocaleTimeString();
+        renderDeadlineBanner();
 
         if (currentUser) {
             showApp();
+        } else if (isDeadlinePassed() && !isAdminLoginMode()) {
+            showUserPicker();
         } else {
             document.getElementById('loginPage').style.display = '';
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('registerForm').classList.add('hidden');
+            document.getElementById('loginMsg').innerHTML = isAdminLoginMode()
+                ? '<div class="alert alert-info">Admin login mode</div>'
+                : '';
         }
     }).catch(err => {
         document.getElementById('loadingOverlay').innerHTML = '<div style="color:red;padding:20px">Failed to connect to Firebase.<br>Check your firebaseConfig in index.html.<br><br>' + err.message + '</div>';
@@ -862,7 +917,7 @@ function loadAllData() {
         if (d.matchResults) appData.matchResults = d.matchResults;
         if (d.apiConfig) appData.apiConfig = { ...appData.apiConfig, ...d.apiConfig };
         refreshCurrentPage();
-        document.getElementById('lastUpdated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+        renderDeadlineBanner();
     });
 
     db.ref('.info/connected').on('value', snap => {
@@ -931,13 +986,40 @@ function logout() {
     currentUser = null; isAdmin = false;
     sessionStorage.removeItem('wcUser');
     stopApiPoll();
-    document.getElementById('appContainer').classList.add('hidden');
-    document.getElementById('mainNav').classList.add('hidden');
+    window.location.reload();
+}
+
+function showUserPicker() {
+    // Show the login page container but render a player-picker instead of login form
     document.getElementById('loginPage').style.display = '';
-    document.getElementById('loginForm').classList.remove('hidden');
+    document.getElementById('loginForm').classList.add('hidden');
     document.getElementById('registerForm').classList.add('hidden');
-    document.getElementById('loginUsername').value = '';
-    document.getElementById('loginPassword').value = '';
+
+    const scores = getAllScores();
+    const loginMsg = document.getElementById('loginMsg');
+
+    loginMsg.innerHTML = `
+        <div style="margin-bottom:18px">
+            <h3 style="color:#0f2444;margin-bottom:8px">🏆 Competition has started!</h3>
+            <p style="color:#64748b;font-size:0.92em">Picks are locked. Select your name to view your teams and points.</p>
+        </div>
+        <div id="userPickerList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+            ${scores.length ? scores.map(p => `
+                <button class="btn" style="text-align:left;padding:12px 16px;border:2px solid #dde4f0;border-radius:8px;background:#f8faff;font-size:1em" onclick="selectGuestUser('${esc(p.key)}', '${esc(p.displayName)}')">
+                    ${p.total > 0 ? `<strong style="color:#0f2444">${esc(p.displayName)}</strong> <span style="color:#64748b;font-size:0.85em">— ${p.total} pts</span>` : `<strong style="color:#0f2444">${esc(p.displayName)}</strong>`}
+                </button>
+            `).join('') : '<p style="color:#999">No players yet.</p>'}
+        </div>
+        <button class="btn" style="width:100%;color:#64748b;font-size:0.88em" onclick="selectGuestUser(null, null)">Continue as guest (no highlight)</button>
+    `;
+}
+
+function selectGuestUser(key, displayName) {
+    // Set currentUser without a password — they're past the deadline, it's view-only
+    currentUser = displayName || '__guest__';
+    isAdmin = false;
+    // Don't save to sessionStorage — keeps it as a soft session choice
+    showApp();
 }
 
 function showApp() {
@@ -946,7 +1028,7 @@ function showApp() {
     document.getElementById('mainNav').classList.remove('hidden');
     document.getElementById('userInfo').innerHTML = '<strong>' + esc(currentUser) + '</strong> <button class="btn btn-sm btn-gold" onclick="logout()">Logout</button>';
     if (isAdmin) document.getElementById('nav-admin').classList.remove('hidden');
-    showPage('leaderboard');
+    showPage('home');
     startApiPollIfEnabled();
 }
 
@@ -955,7 +1037,7 @@ function showApp() {
 // ============================================================
 let currentPage = 'leaderboard';
 function showPage(page) {
-    ['leaderboard','mypicks','allteams','results','fixtures','insights','admin'].forEach(p => {
+    ['home','leaderboard','mypicks','allteams','results','fixtures','insights','admin'].forEach(p => {
         document.getElementById(p + 'Page').classList.add('hidden');
         document.getElementById('nav-' + p) && document.getElementById('nav-' + p).classList.remove('active');
     });
@@ -974,6 +1056,7 @@ function refreshCurrentPage() {
 }
 
 function renderPage(page) {
+    if (page === 'home') renderHome();
     if (page === 'leaderboard') renderLeaderboard();
     if (page === 'mypicks') renderMyPicks();
     if (page === 'allteams') renderAllTeams();
@@ -981,6 +1064,15 @@ function renderPage(page) {
     if (page === 'fixtures') renderFixtures();
     if (page === 'insights') renderInsights();
     if (page === 'admin') renderAdmin();
+}
+
+function renderHome() {
+    // Home page is static HTML — nothing dynamic needed.
+    // But update the greeting if we want to personalise it.
+    const el = document.getElementById('homeGreeting');
+    if (el && currentUser && currentUser !== '__guest__') {
+        el.textContent = 'Welcome back, ' + currentUser + '!';
+    }
 }
 
 // ============================================================
@@ -1090,6 +1182,41 @@ function isDeadlinePassed() {
     return new Date() > new Date(appData.settings.deadline);
 }
 
+function isAdminLoginMode() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('admin') === '1';
+}
+
+function formatIrishDateTime(dateValue) {
+    return new Date(dateValue).toLocaleString('en-IE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
+}
+
+function renderDeadlineBanner() {
+    const el = document.getElementById('deadlineBanner');
+    if (!el) return;
+
+    const deadline = appData.settings.deadline;
+    if (!deadline) {
+        el.textContent = 'Picks deadline: Not set yet';
+        return;
+    }
+
+    const deadlineDate = new Date(deadline);
+    const locked = new Date() > deadlineDate;
+
+    el.textContent = locked
+        ? 'Picks locked: ' + formatIrishDateTime(deadlineDate)
+        : 'Picks deadline: ' + formatIrishDateTime(deadlineDate);
+}
+
+
 function renderMyPicks() {
     const locked = isDeadlinePassed();
     const deadline = appData.settings.deadline;
@@ -1097,7 +1224,7 @@ function renderMyPicks() {
     document.getElementById('picksLockedNote').classList.toggle('hidden', !locked);
     if (deadline && !locked) {
         document.getElementById('picksDeadlineNote').classList.remove('hidden');
-        document.getElementById('picksDeadlineNote').textContent = 'Picks deadline: ' + new Date(deadline).toLocaleString();
+        document.getElementById('picksDeadlineNote').textContent = 'Picks deadline: ' + formatIrishDateTime(deadline);
     } else {
         document.getElementById('picksDeadlineNote').classList.add('hidden');
     }
@@ -1177,7 +1304,7 @@ function renderAllTeams() {
     }
 
     if (!picksVisible) {
-        const deadline = appData.settings.deadline ? new Date(appData.settings.deadline).toLocaleString() : 'the deadline';
+        const deadline = appData.settings.deadline ? formatIrishDateTime(appData.settings.deadline) : 'the deadline';
         container.innerHTML = `<div class="alert alert-warning" style="grid-column:1/-1">
             &#x1F512; Picks are hidden until ${esc(deadline)} to keep things fair. You can see your own picks on the <strong>My Picks</strong> page.
             <br><br>Entered so far: <strong>${scores.length}</strong> player(s).
@@ -1562,7 +1689,7 @@ function mapEspnRound(eventName) {
 
 function findManualMatch(teamA, teamB) {
     return Object.entries(appData.matchResults || {}).find(([k, m]) => {
-        if (k.startsWith('api-')) return false;
+        if (k.startsWith('espn-')) return false;
         return (m.teamA.toLowerCase() === teamA.toLowerCase() && m.teamB.toLowerCase() === teamB.toLowerCase()) ||
                (m.teamA.toLowerCase() === teamB.toLowerCase() && m.teamB.toLowerCase() === teamA.toLowerCase());
     });
@@ -1719,11 +1846,11 @@ function renderFixturesFromData() {
             const isFt   = status.completed;
             const score = isFt || isLive
                 ? `${home.score ?? '–'} – ${away.score ?? '–'}`
-                : new Date(e.date).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'UTC' }) + ' GMT';
+                : new Date(e.date).toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Dublin'})
             const grp = teamGroup(hName) || teamGroup(aName);
             const rowClass = ['fixture-row', isMyMatch ? 'my-team' : '', isLive ? 'live' : '', isFt ? 'ft' : ''].filter(Boolean).join(' ');
             const scoreClass = isLive ? 'fix-score live-score' : 'fix-score';
-            const timeLabel = isFt ? 'FT' : isLive ? `<span class="fix-status-live">● LIVE</span>` : new Date(e.date).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'UTC' }) + ' GMT';
+            const timeLabel = isFt ? 'FT' : isLive ? `<span class="fix-status-live">● LIVE</span>` : new Date(e.date).toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Dublin'});
             return `<div class="${rowClass}">
                 <div class="fix-home">${isMyH ? '<strong>' : ''}${countryFlag(hName)} ${esc(hName)}${isMyH ? '</strong>' : ''}</div>
                 <div class="${scoreClass}">${isFt || isLive ? score : 'vs'}</div>
