@@ -4134,6 +4134,8 @@
                         matches.push({
                             teamA: home.team.displayName,
                             teamB: away.team.displayName,
+                            scoreA: hg,
+                            scoreB: ag,
                             result, round,
                             espnId: event.id
                         });
@@ -4151,7 +4153,7 @@
                     const manualKey = findManualMatch(m.teamA, m.teamB);
                     if (!manualKey) {
                         const key = 'espn-' + m.espnId;
-                        updates[key] = { teamA: m.teamA, teamB: m.teamB, round: m.round, result: m.result, source: 'espn' };
+                        updates[key] = { teamA: m.teamA, teamB: m.teamB, scoreA: m.scoreA, scoreB: m.scoreB, round: m.round, result: m.result, source: 'espn' };
                     }
                 });
                 if (Object.keys(updates).length) {
