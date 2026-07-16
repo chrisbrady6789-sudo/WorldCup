@@ -2368,6 +2368,7 @@
                                 <option value="r16">Last 16</option>
                                 <option value="qf">Quarter Final</option>
                                 <option value="sf">Semi Final</option>
+                                <option value="bronze">3rd Place</option>
                                 <option value="final">Final</option>
                             </select>
                         </div>
@@ -2659,9 +2660,9 @@
         let tempPicks = {};
         let apiPollTimer = null;
 
-        const ROUND_LABELS = { group: 'Group Stage', r32: 'Last 32', r16: 'Last 16', qf: 'Quarter Final', sf: 'Semi Final', final: 'Final' };
-        const ROUND_POINTS = { group: { win: 2, draw: 1 }, r32: { win: 3 }, r16: { win: 5 }, qf: { win: 8 }, sf: { win: 10 }, final: { win: 20 } };
-        const ROUND_CLASS = { group: 'round-group', r32: 'round-r16', r16: 'round-r16', qf: 'round-qf', sf: 'round-sf', final: 'round-final' };
+        const ROUND_LABELS = { group: 'Group Stage', r32: 'Last 32', r16: 'Last 16', qf: 'Quarter Final', sf: 'Semi Final', bronze: '3rd Place', final: 'Final' };
+        const ROUND_POINTS = { group: { win: 2, draw: 1 }, r32: { win: 3 }, r16: { win: 5 }, qf: { win: 8 }, sf: { win: 10 }, bronze: { win: 0 }, final: { win: 20 } };
+        const ROUND_CLASS = { group: 'round-group', r32: 'round-r16', r16: 'round-r16', qf: 'round-qf', sf: 'round-sf', bronze: 'round-sf', final: 'round-final' };
         const NUM_BRACKETS = 8;
 
         // ============================================================
@@ -4732,7 +4733,7 @@
                 case 'quarterfinals': return 'qf';
                 case 'semifinals': return 'sf';
                 case 'final': return 'final';
-                case '3rd-place-match': return 'sf';
+                case '3rd-place-match': return 'bronze';
                 default: return 'group';
             }
         }
